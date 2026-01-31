@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Shining Stars</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+<div class="bg-white p-8 rounded shadow-md w-96">
+    <h1 class="text-2xl font-bold mb-6 text-center text-blue-700">Login</h1>
+    <form id="loginForm" class="space-y-4">
+        <input type="email" placeholder="Email" id="loginEmail" class="w-full border p-2 rounded" required>
+        <input type="password" placeholder="Password" id="loginPassword" class="w-full border p-2 rounded" required>
+        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+            Login
+        </button>
+    </form>
+    <p class="mt-4 text-center text-sm">
+        Don't have an account? 
+        <a href="register.html" class="text-blue-600 hover:underline">Register</a>
+    </p>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron');
+
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("loginEmail").value;
+    const password = document.getElementById("loginPassword").value;
+
+    const result = await ipcRenderer.invoke('login', { email, password });
+    if(!result.success){
+        alert(result.message);
+    }
+});
+</script>
+
+</body>
+</html>

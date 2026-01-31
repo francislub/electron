@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Classes - Shining Stars</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex h-screen bg-gray-100">
+
+<!-- Sidebar -->
+<div class="w-64 bg-blue-900 text-white flex flex-col">
+    <div class="p-6 text-center font-bold text-xl border-b border-blue-800">
+        🌟 Shining Stars
+    </div>
+    <nav class="flex-1 px-4 py-6 space-y-2">
+        <a href="dashboard.html" class="block py-2 px-3 rounded hover:bg-blue-800">🏠 Dashboard</a>
+        <a href="teachers.html" class="block py-2 px-3 rounded hover:bg-blue-800">👩‍🏫 Teachers</a>
+        <a href="students.html" class="block py-2 px-3 rounded hover:bg-blue-800">🧑‍🎓 Students</a>
+        <a href="classes.html" class="block py-2 px-3 rounded hover:bg-blue-800">📅 Classes</a>
+        <a href="index.html" class="block py-2 px-3 rounded hover:bg-red-600">🚪 Logout</a>
+    </nav>
+</div>
+
+<!-- Content -->
+<div class="flex-1 p-8 overflow-auto">
+    <h1 class="text-3xl font-bold mb-4">Classes</h1>
+    <button id="addClassBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-4">Add Class</button>
+    <table class="w-full bg-white rounded shadow overflow-hidden">
+        <thead class="bg-gray-200">
+            <tr>
+                <th>Class Name</th><th>Teacher</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="classesTable"></tbody>
+    </table>
+</div>
+
+<!-- Modal -->
+<div id="classModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+  <div class="bg-white rounded shadow-lg w-96 p-6">
+    <h2 id="modalTitle" class="text-xl font-bold mb-4">Add Class</h2>
+    <input type="hidden" id="classId">
+    <input type="text" id="className" placeholder="Class Name" class="border p-2 w-full mb-2 rounded">
+    <input type="text" id="classTeacher" placeholder="Teacher" class="border p-2 w-full mb-4 rounded">
+    <div class="flex justify-end space-x-2">
+      <button id="saveClass" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
+      <button id="cancelClass" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron');
+const table = document.getElementById('classesTable');
+const modal = document.getElementById('classModal');
+const modalTitle = document.getElementById('modalTitle');
+const classId = document.getElementById('classId');
+const className = document.getElementById('className');
+const classTeacher = document.getElementById('classTeacher');
+
+async function loadClasses(){
+    table.innerHTML='';
+    const classes = await ipcRenderer.invoke('get-classes');
+    classes.forEach(c=>{
+        const row = document.createElement('tr');
+        row.innerHTML=`
+            <td class="border p-2">${c.name}</td>
+            <td class="border p-2">${c.teacher}</td>
+            <td class="border p-2">
+                <button class="editClass bg-yellow-400 px-2 py-1 rounded">Edit</button>
+                <button class="deleteClass bg-red-500 text-white px-2 py-1 rounded">Delete</button>
+            </td>`;
+        table.appendChild(row);
+        row.querySelector('.editClass').addEventListener('click',()=>openModal(c));
+        row.querySelector('.deleteClass').addEventListener('click',async()=>{ await ipcRenderer.invoke('delete-class',c.id); loadClasses(); });
+    });
+}
+
+function openModal(c=null){
+    modal.classList.remove('hidden');
+    if(c){
+        modalTitle.innerText='Edit Class';
+        classId.value=c.id;
+        className.value=c.name;
+        classTeacher.value=c.teacher;
+    } else {
+        modalTitle.innerText='Add Class';
+        classId.value='';
+        className.value='';
+        classTeacher.value='';
+    }
+}
+
+document.getElementById('cancelClass').addEventListener('click',()=> modal.classList.add('hidden'));
+document.getElementById('saveClass').addEventListener('click', async ()=>{
+    const cls = {
+        id: classId.value,
+        name: className.value,
+        teacher: classTeacher.value
+    };
+    if(cls.id) await ipcRenderer.invoke('update-class', cls);
+    else await ipcRenderer.invoke('add-class', cls);
+    modal.classList.add('hidden');
+    loadClasses();
+});
+document.getElementById('addClassBtn').addEventListener('click',()=>openModal());
+loadClasses();
+</script>
+</body>
+</html>

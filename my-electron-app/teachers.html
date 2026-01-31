@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Teachers - Shining Stars</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex h-screen bg-gray-100">
+
+<!-- Sidebar -->
+<div class="w-64 bg-blue-900 text-white flex flex-col">
+    <div class="p-6 text-center font-bold text-xl border-b border-blue-800">
+        🌟 Shining Stars
+    </div>
+    <nav class="flex-1 px-4 py-6 space-y-2">
+        <a href="dashboard.html" class="block py-2 px-3 rounded hover:bg-blue-800">🏠 Dashboard</a>
+        <a href="teachers.html" class="block py-2 px-3 rounded hover:bg-blue-800">👩‍🏫 Teachers</a>
+        <a href="students.html" class="block py-2 px-3 rounded hover:bg-blue-800">🧑‍🎓 Students</a>
+        <a href="classes.html" class="block py-2 px-3 rounded hover:bg-blue-800">📅 Classes</a>
+        <a href="index.html" class="block py-2 px-3 rounded hover:bg-red-600">🚪 Logout</a>
+    </nav>
+</div>
+
+<!-- Content -->
+<div class="flex-1 p-8 overflow-auto">
+    <h1 class="text-3xl font-bold mb-4">Teachers</h1>
+    <button id="addTeacherBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-4">Add Teacher</button>
+
+    <!-- Table -->
+    <table class="w-full bg-white rounded shadow overflow-hidden">
+        <thead class="bg-gray-200">
+            <tr>
+                <th>Name</th><th>Subject</th><th>Email</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="teachersTable"></tbody>
+    </table>
+</div>
+
+<!-- Modal -->
+<div id="teacherModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+  <div class="bg-white rounded shadow-lg w-96 p-6">
+    <h2 id="modalTitle" class="text-xl font-bold mb-4">Add Teacher</h2>
+    <input type="hidden" id="teacherId">
+    <input type="text" id="teacherName" placeholder="Name" class="border p-2 w-full mb-2 rounded">
+    <input type="text" id="teacherSubject" placeholder="Subject" class="border p-2 w-full mb-2 rounded">
+    <input type="email" id="teacherEmail" placeholder="Email" class="border p-2 w-full mb-4 rounded">
+    <div class="flex justify-end space-x-2">
+      <button id="saveTeacher" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
+      <button id="cancelTeacher" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron');
+
+const table = document.getElementById('teachersTable');
+const modal = document.getElementById('teacherModal');
+const modalTitle = document.getElementById('modalTitle');
+const teacherId = document.getElementById('teacherId');
+const teacherName = document.getElementById('teacherName');
+const teacherSubject = document.getElementById('teacherSubject');
+const teacherEmail = document.getElementById('teacherEmail');
+
+async function loadTeachers(){
+    table.innerHTML='';
+    const teachers = await ipcRenderer.invoke('get-teachers');
+    teachers.forEach(t=>{
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="border p-2">${t.name}</td>
+            <td class="border p-2">${t.subject}</td>
+            <td class="border p-2">${t.email}</td>
+            <td class="border p-2">
+                <button class="editTeacher bg-yellow-400 px-2 py-1 rounded">Edit</button>
+                <button class="deleteTeacher bg-red-500 text-white px-2 py-1 rounded">Delete</button>
+            </td>`;
+        table.appendChild(row);
+
+        row.querySelector('.editTeacher').addEventListener('click',()=>openModal(t));
+        row.querySelector('.deleteTeacher').addEventListener('click', async ()=>{ 
+            await ipcRenderer.invoke('delete-teacher', t.id);
+            loadTeachers();
+        });
+    });
+}
+
+// Open Modal
+function openModal(t=null){
+    modal.classList.remove('hidden');
+    if(t){
+        modalTitle.innerText='Edit Teacher';
+        teacherId.value = t.id;
+        teacherName.value = t.name;
+        teacherSubject.value = t.subject;
+        teacherEmail.value = t.email;
+    } else {
+        modalTitle.innerText='Add Teacher';
+        teacherId.value='';
+        teacherName.value='';
+        teacherSubject.value='';
+        teacherEmail.value='';
+    }
+}
+
+// Close Modal
+document.getElementById('cancelTeacher').addEventListener('click',()=> modal.classList.add('hidden'));
+
+// Save Data
+document.getElementById('saveTeacher').addEventListener('click', async ()=>{
+    const t = {
+        id: teacherId.value,
+        name: teacherName.value,
+        subject: teacherSubject.value,
+        email: teacherEmail.value
+    };
+    if(t.id) await ipcRenderer.invoke('update-teacher', t);
+    else await ipcRenderer.invoke('add-teacher', t);
+    modal.classList.add('hidden');
+    loadTeachers();
+});
+
+// Add Teacher button
+document.getElementById('addTeacherBtn').addEventListener('click', ()=> openModal());
+
+loadTeachers();
+</script>
+</body>
+</html>
